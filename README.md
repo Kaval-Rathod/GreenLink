@@ -183,7 +183,35 @@ python test_full_workflow.py
 python test_ai_simple.py
 ```
 
-### 5. Manual API Testing
+### 5. Phase 3 Blockchain Test
+```bash
+python test_phase3.py
+```
+
+**Expected Output:**
+```
+🚀 Testing Phase 3: Blockchain Integration
+============================================================
+1️⃣ Checking blockchain status...
+2️⃣ Creating test user...
+✅ User created: Blockchain Test User (ID: 3)
+3️⃣ Logging in...
+✅ Login successful
+4️⃣ Uploading test image...
+✅ Upload successful: Submission ID 5
+5️⃣ Analyzing with AI...
+✅ AI Analysis complete!
+   Greenery: 42.0%
+   Carbon Value: 0.21 tonnes CO2
+6️⃣ Registering submission on blockchain...
+7️⃣ Minting carbon credit token...
+8️⃣ Getting user tokens...
+9️⃣ Getting marketplace listings...
+🔟 Getting user credits from database...
+🎉 Phase 3 Blockchain Integration Test Completed!
+```
+
+### 6. Manual API Testing
 
 #### Test Backend Health
 ```bash
@@ -258,6 +286,27 @@ GET /users/me
 Authorization: Bearer <token>
 ```
 
+#### Blockchain Endpoints (Phase 3)
+```bash
+# Blockchain status
+GET /blockchain/status
+
+# Mint carbon credit token
+POST /blockchain/mint/{submission_id}
+Authorization: Bearer <token>
+
+# Get user tokens
+GET /blockchain/tokens
+Authorization: Bearer <token>
+
+# Get marketplace listings
+GET /blockchain/marketplace
+
+# Register submission on blockchain
+POST /blockchain/register-submission/{submission_id}
+Authorization: Bearer <token>
+```
+
 ## 📁 Project Structure
 
 ```
@@ -269,7 +318,8 @@ GreenLink_web/
 │   │   ├── schemas.py       # Pydantic schemas
 │   │   ├── crud.py          # Database operations
 │   │   ├── auth.py          # JWT authentication
-│   │   └── database.py      # Database connection
+│   │   ├── database.py      # Database connection
+│   │   └── blockchain.py    # Blockchain integration
 │   ├── requirements.txt     # Python dependencies
 │   └── Dockerfile          # Backend container
 ├── ai_service/
@@ -277,6 +327,16 @@ GreenLink_web/
 │   ├── greenery_detector.py # Core AI logic
 │   ├── requirements.txt    # ML dependencies
 │   └── Dockerfile         # AI service container
+├── blockchain/             # Smart contracts (Phase 3)
+│   ├── contracts/
+│   │   ├── CarbonCreditToken.sol
+│   │   ├── CarbonCreditMarket.sol
+│   │   └── GreenLinkRegistry.sol
+│   ├── scripts/
+│   │   └── deploy.js       # Deployment script
+│   ├── test/
+│   │   └── contracts.test.js
+│   └── hardhat.config.js   # Hardhat configuration
 ├── db/
 │   └── init.sql           # Database schema
 ├── docker-compose.yml     # Service orchestration

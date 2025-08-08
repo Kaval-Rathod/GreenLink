@@ -8,6 +8,7 @@ import requests
 import json
 
 import database, models, schemas, crud, auth
+from blockchain import blockchain_service
 
 # Create DB tables (safe to call every start)
 models.Base.metadata.create_all(bind=database.engine)
@@ -191,3 +192,85 @@ def get_ai_status():
             return {"status": "error", "message": f"AI service returned {response.status_code}"}
     except Exception as e:
         return {"status": "unavailable", "message": str(e)}
+
+# --------- Phase 3: Blockchain Integration ---------
+
+@app.get("/blockchain/status")
+def get_blockchain_status():
+    """Get blockchain connection status"""
+    return blockchain_service.get_network_info()
+
+@app.post("/blockchain/mint/{submission_id}")
+def mint_carbon_credit(submission_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Mint carbon credit token for a submission"""
+    submission = crud.get_submission(db, submission_id)
+    if not submission or submission.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    if not submission.greenery_pct or not submission.carbon_value:
+        raise HTTPException(status_code=400, detail="Submission must be analyzed first")
+    
+    # Get user's wallet address (for now, use a placeholder)
+    user_wallet = current_user.wallet_address or "0x0000000000000000000000000000000000000000"
+    
+    # Create image URI (in production, this would be IPFS hash)
+    image_uri = f"file://{submission.photo_path}"
+    
+    # Mint token on blockchain
+    tx_hash = blockchain_service.mint_carbon_credit(
+        to_address=user_wallet,
+        carbon_value=submission.carbon_value,
+        greenery_percentage=submission.greenery_pct,
+        location=f"{submission.gps_coords.x},{submission.gps_coords.y}" if submission.gps_coords else "0,0",
+        image_uri=image_uri
+    )
+    
+    if tx_hash:
+        # Create credit record in database
+        credit = crud.create_credit(db, user_id=current_user.id, tonnes_co2=submission.carbon_value, token_id=tx_hash)
+        return {"success": True, "transaction_hash": tx_hash, "credit_id": credit.id}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to mint token on blockchain")
+
+@app.get("/blockchain/tokens")
+def get_user_tokens(current_user: models.User = Depends(get_current_user)):
+    """Get user's carbon credit tokens"""
+    user_wallet = current_user.wallet_address or "0x0000000000000000000000000000000000000000"
+    tokens = blockchain_service.get_user_tokens(user_wallet)
+    return {"tokens": tokens, "count": len(tokens)}
+
+@app.get("/blockchain/marketplace")
+def get_marketplace_listings():
+    """Get active marketplace listings"""
+    listings = blockchain_service.get_marketplace_listings()
+    return {"listings": listings, "count": len(listings)}
+
+@app.post("/blockchain/register-submission/{submission_id}")
+def register_submission_on_blockchain(submission_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Register submission on blockchain registry"""
+    submission = crud.get_submission(db, submission_id)
+    if not submission or submission.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    if not submission.greenery_pct or not submission.carbon_value:
+        raise HTTPException(status_code=400, detail="Submission must be analyzed first")
+    
+    # Get user's wallet address
+    user_wallet = current_user.wallet_address or "0x0000000000000000000000000000000000000000"
+    
+    # Create image hash (in production, this would be IPFS hash)
+    image_hash = f"ipfs://{hash(submission.photo_path)}"
+    
+    # Register on blockchain
+    tx_hash = blockchain_service.register_submission(
+        user_address=user_wallet,
+        image_hash=image_hash,
+        greenery_percentage=submission.greenery_pct,
+        carbon_value=submission.carbon_value,
+        location=f"{submission.gps_coords.x},{submission.gps_coords.y}" if submission.gps_coords else "0,0"
+    )
+    
+    if tx_hash:
+        return {"success": True, "transaction_hash": tx_hash}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to register submission on blockchain")

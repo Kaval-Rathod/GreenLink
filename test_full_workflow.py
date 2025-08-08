@@ -28,7 +28,9 @@ def create_test_image():
     except ImportError:
         print("ℹ️ PIL not available, using existing test image...")
         # Use existing test image if available
-        if os.path.exists("test_photo.png"):
+        if os.path.exists("test_photo.jpg"):
+            return "test_photo.jpg"
+        elif os.path.exists("test_photo.png"):
             return "test_photo.png"
         else:
             print("❌ No test image available. Please install PIL or add a test image.")

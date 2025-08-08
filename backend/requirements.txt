@@ -9,3 +9,4 @@ pydantic[email]
 shapely
 python-multipart
 requests
+web3==6.11.3
