@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+psycopg2-binary
+SQLAlchemy>=1.4
+geoalchemy2
+passlib[bcrypt]
+python-jose[cryptography]
+pydantic[email]
+shapely
+python-multipart
+requests

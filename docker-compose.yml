@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: greenlink
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  backend:
+    build: ./backend
+    depends_on:
+      - db
+      - ai_service
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://admin:admin@db:5432/greenlink
+      AI_SERVICE_URL: http://ai_service:8001
+    volumes:
+      - ./backend/app:/app
+
+  ai_service:
+    build: ./ai_service
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ai_service/output:/app/output
+      - ./ai_service/input:/app/input
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+volumes:
+  db_data:
