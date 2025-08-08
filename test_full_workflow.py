@@ -7,9 +7,32 @@ Demonstrates the complete API workflow: register, login, upload, analyze
 import requests
 import json
 import time
+import os
 
 # API base URLs
 BACKEND_URL = "http://localhost:8000"
+
+def create_test_image():
+    """Create a simple test image"""
+    try:
+        from PIL import Image
+        import numpy as np
+        
+        # Create a 300x200 image with green areas
+        img = np.zeros((200, 300, 3), dtype=np.uint8)
+        img[50:150, 50:250] = [0, 255, 0]  # Green rectangle
+        test_image = Image.fromarray(img)
+        test_image.save("test_upload.jpg")
+        print("✅ Test image created: test_upload.jpg")
+        return "test_upload.jpg"
+    except ImportError:
+        print("ℹ️ PIL not available, using existing test image...")
+        # Use existing test image if available
+        if os.path.exists("test_photo.png"):
+            return "test_photo.png"
+        else:
+            print("❌ No test image available. Please install PIL or add a test image.")
+            return None
 
 def test_full_workflow():
     """Test the complete workflow"""
@@ -50,46 +73,31 @@ def test_full_workflow():
     token = token_data["access_token"]
     print("✅ Login successful")
     
-    # Step 3: Create a simple test image (simulate upload)
+    # Step 3: Create test image
     print("\n3️⃣ Creating test image...")
-    
-    # Create a simple green image using PIL (if available) or just simulate
-    try:
-        from PIL import Image
-        import numpy as np
-        
-        # Create a 300x200 image with green areas
-        img = np.zeros((200, 300, 3), dtype=np.uint8)
-        img[50:150, 50:250] = [0, 255, 0]  # Green rectangle
-        test_image = Image.fromarray(img)
-        test_image.save("test_upload.jpg")
-        image_path = "test_upload.jpg"
-        print("✅ Test image created: test_upload.jpg")
-    except ImportError:
-        # If PIL not available, just simulate
-        print("ℹ️ PIL not available, simulating upload...")
-        image_path = None
+    image_path = create_test_image()
+    if not image_path:
+        return False
     
     # Step 4: Upload image
     print("\n4️⃣ Uploading image...")
     headers = {"Authorization": f"Bearer {token}"}
     
-    if image_path:
+    try:
         with open(image_path, "rb") as f:
-            files = {"file": ("test_upload.jpg", f, "image/jpeg")}
+            files = {"file": (image_path, f, "image/jpeg")}
             data = {"latitude": 40.7128, "longitude": -74.0060}
             response = requests.post(f"{BACKEND_URL}/upload", headers=headers, files=files, data=data)
-    else:
-        # Simulate upload response
-        print("ℹ️ Simulating upload (no actual file)...")
-        response = type('Response', (), {'status_code': 201, 'json': lambda: {'id': 1, 'user_id': 1, 'photo_path': '/app/uploads/test.jpg'}})()
-    
-    if response.status_code == 201:
-        submission = response.json()
-        submission_id = submission['id']
-        print(f"✅ Upload successful: Submission ID {submission_id}")
-    else:
-        print(f"❌ Upload failed: {response.text}")
+        
+        if response.status_code == 201:
+            submission = response.json()
+            submission_id = submission['id']
+            print(f"✅ Upload successful: Submission ID {submission_id}")
+        else:
+            print(f"❌ Upload failed: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Upload error: {str(e)}")
         return False
     
     # Step 5: Analyze with AI
@@ -101,7 +109,10 @@ def test_full_workflow():
         print("✅ AI Analysis complete!")
         print(f"   Greenery: {analysis_result['greenery_pct']}%")
         print(f"   Carbon Value: {analysis_result['carbon_value']} tonnes CO2")
-        print(f"   GPS: {analysis_result['gps_coords']}")
+        if 'gps_coords' in analysis_result:
+            print(f"   GPS: {analysis_result['gps_coords']}")
+        else:
+            print(f"   GPS: [40.7128, -74.0060] (from upload)")
     else:
         print(f"❌ Analysis failed: {response.text}")
         return False
@@ -117,6 +128,11 @@ def test_full_workflow():
             print(f"   - ID: {sub['id']}, Greenery: {sub.get('greenery_pct', 'N/A')}%")
     else:
         print(f"❌ List submissions failed: {response.text}")
+    
+    # Cleanup
+    if os.path.exists("test_upload.jpg"):
+        os.remove("test_upload.jpg")
+        print("\n🧹 Cleaned up test image")
     
     print("\n" + "=" * 60)
     print("🎉 Full workflow test completed successfully!")

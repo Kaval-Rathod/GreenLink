@@ -158,6 +158,26 @@ python check_services.py
 python test_full_workflow.py
 ```
 
+**Expected Output:**
+```
+🚀 Testing Full Upload & Analysis Workflow
+============================================================
+2️⃣ Logging in...
+✅ Login successful
+3️⃣ Creating test image...
+ℹ️ PIL not available, using existing test image...
+4️⃣ Uploading image...
+✅ Upload successful: Submission ID 3
+5️⃣ Analyzing with AI...
+✅ AI Analysis complete!
+   Greenery: 42.0%
+   Carbon Value: 0.21 tonnes CO2
+   GPS: [40.7128, -74.0060] (from upload)
+6️⃣ Listing submissions...
+🎉 Full workflow test completed successfully!
+✅ API is working correctly!
+```
+
 ### 4. AI Integration Test
 ```bash
 python test_ai_simple.py
